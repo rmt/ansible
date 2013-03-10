@@ -32,8 +32,7 @@ class VarsModule(object):
         inventory = self.inventory
         #hostrec = inventory.get_host(host)
 
-        groupz = sorted(inventory.groups_for_host(host.name), key=lambda g: g.depth)
-        groups = [ g.name for g in groupz ]
+        groups = sorted(inventory.groups_for_host(host.name))
         basedir = inventory.basedir()
 
         if basedir is None:

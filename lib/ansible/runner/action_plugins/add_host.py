@@ -21,8 +21,6 @@ from ansible.callbacks import vv
 from ansible.errors import AnsibleError as ae
 from ansible.runner.return_data import ReturnData
 from ansible.utils import parse_kv, template
-from ansible.inventory.host import Host
-from ansible.inventory.group import Group
 
 class ActionModule(object):
     ''' Create inventory hosts and groups in the memory inventory'''
@@ -55,36 +53,27 @@ class ActionModule(object):
         if ":" in new_hostname:
             new_hostname, new_port = new_hostname.split(":")
             args['ansible_ssh_port'] = new_port
-        
-        # create host and get inventory    
-        new_host = Host(new_hostname)
+
+        # create host and get inventory
         inventory = self.runner.inventory
-        
+        new_hostvars = {}
+
         # Add any variables to the new_host
         for k in args.keys():
             if not k in [ 'name', 'hostname', 'groupname', 'groups' ]:
-                new_host.set_variable(k, args[k]) 
-                
-        
-        # add the new host to the 'all' group
-        allgroup = inventory.get_group('all')
-        allgroup.add_host(new_host)
+                new_hostvars[k] = args[k]
+
+        groupnames = args.get('groupname', args.get('groups', None))
+        if groupnames:
+            groupnames_list = groupnames.split(",")
+        else:
+            groupnames_list = None
+        inventory.add_host(new_hostname, new_hostvars, groupnames_list)
         result['changed'] = True
-       
-        groupnames = args.get('groupname', args.get('groups', '')) 
-        # add it to the group if that was specified
-        if groupnames != '':
-            for group_name in groupnames.split(","):
-                if not inventory.get_group(group_name):
-                    new_group = Group(group_name)
-                    inventory.add_group(new_group)
-                grp = inventory.get_group(group_name)
-                grp.add_host(new_host)
-            vv("added host to group via add_host module: %s" % group_name)
-            result['new_groups'] = groupnames.split(",")
-            
+
+        result['new_groups'] = groupnames_list
         result['new_host'] = new_hostname
-        
+
         return ReturnData(conn=conn, comm_ok=True, result=result)
 
 

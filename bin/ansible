@@ -27,7 +27,6 @@ import ansible.constants as C
 from ansible import utils
 from ansible import errors
 from ansible import callbacks
-from ansible import inventory
 
 ########################################################
 
@@ -80,7 +79,8 @@ class Cli(object):
 
         pattern = args[0]
 
-        inventory_manager = inventory.Inventory(options.inventory)
+        inventory_manager_factory = utils.lookup_module_attribute(C.DEFAULT_INVENTORY_FACTORY)
+        inventory_manager = inventory_manager_factory(options.inventory)
         if options.subset:
             inventory_manager.subset(options.subset)
         hosts = inventory_manager.list_hosts(pattern)

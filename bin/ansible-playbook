@@ -81,7 +81,8 @@ def main(args):
         parser.print_help(file=sys.stderr)
         return 1
 
-    inventory = ansible.inventory.Inventory(options.inventory)
+    inventory_manager_factory = utils.lookup_module_attribute(C.DEFAULT_INVENTORY_FACTORY)
+    inventory = inventory_manager_factory(options.inventory)
     inventory.subset(options.subset)
     if len(inventory.list_hosts()) == 0:
         raise errors.AnsibleError("provided hosts list is empty")

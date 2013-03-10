@@ -30,8 +30,9 @@ from ansible.inventory.group import Group
 from ansible.inventory.host import Host
 from ansible import errors
 from ansible import utils
+from base import InventoryBase
 
-class Inventory(object):
+class Inventory(InventoryBase):
     """
     Host inventory for ansible.
     """
@@ -54,7 +55,7 @@ class Inventory(object):
         self._groups_list    = {} 
 
         # the inventory object holds a list of groups
-        self.groups = []
+        self.groups = [] # TODO - why is this a list?
 
         # a list of host(names) to contain current inquiries to
         self._restriction = None
@@ -180,7 +181,7 @@ class Inventory(object):
         """
         given a pattern like foo, that matches hosts, return all of hosts
         given a pattern like foo[0:5], where foo matches hosts, return the first 6 hosts
-        """ 
+        """
 
         (loose_pattern, limits) = self._enumeration_info(pat)
         if not limits:
@@ -218,7 +219,7 @@ class Inventory(object):
         for group in groups:
             for hostn in group.get_hosts():
                 if host == hostn.name:
-                    results.append(group)
+                    results.append(group.name)
                     continue
         return results
 
@@ -300,7 +301,7 @@ class Inventory(object):
         return self._restriction
 
     def restrict_to(self, restriction):
-        """ 
+        """
         Restrict list operations to the hosts given in restriction.  This is used
         to exclude failed hosts in main playbook code, don't use this for other
         reasons.
@@ -317,14 +318,14 @@ class Inventory(object):
         if type(restriction) != list:
             restriction = [ restriction ]
         self._also_restriction = restriction
-    
+
     def subset(self, subset_pattern):
-        """ 
+        """
         Limits inventory results to a subset of inventory that matches a given
         pattern, such as to select a given geographic of numeric slice amongst
-        a previous 'hosts' selection that only select roles, or vice versa.  
+        a previous 'hosts' selection that only select roles, or vice versa.
         Corresponds to --limit parameter to ansible-playbook
-        """        
+        """
         if subset_pattern is None:
             self._subset = None
         else:
@@ -334,7 +335,7 @@ class Inventory(object):
     def lift_restriction(self):
         """ Do not restrict list operations """
         self._restriction = None
-    
+
     def lift_also_restriction(self):
         """ Clears the also restriction """
         self._also_restriction = None
@@ -350,3 +351,48 @@ class Inventory(object):
         if not self.is_file():
             return None
         return os.path.dirname(self.host_list)
+
+    def add_host(self, hostname, hostvars=None, groupnames=None, port=None):
+        """
+        Add a new host, and add to the given groups, creating them if
+        necessary. If the host already exists, re-use it, but still set
+        hostvars and add it to groups.
+        """
+        all_group = self.get_group("all")
+        host = None
+        for ihost in all_group.get_hosts():
+            if ihost.hostname == hostname:
+                host = ihost
+        if host is None:
+            host = Host(hostname, port=port)
+        if hostvars:
+            for k,v in hostvars.items():
+                host.set_variable(k, v)
+        all_group.add_host(host)
+        if groupnames:
+            for groupname in groupnames:
+                if groupname == "all":
+                    continue
+                group_object = self.get_group(groupname)
+                if group_object is None: # add group if missing
+                    group_object = Group(groupname)
+                    self.groups.append(group_object)
+                group_object.add_host(host)
+
+    def add_host_to_group(self, hostname, groupname):
+        """
+        Add the given host to the given group, creating the group if necessary
+        """
+        all_group = self.get_group("all")
+        host = None
+        for ihost in all_group.get_hosts():
+            if ihost.hostname == hostname:
+                host = ihost
+        if not host:
+            return # XXX - throw an exception?
+        host = all_group.get_host(hostname)
+        group = self.get_group(groupname)
+        if group is None:
+            group = Group(groupname)
+            self.groups.append(group)
+        group.add_host(host)

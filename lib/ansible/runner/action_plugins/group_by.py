@@ -66,17 +66,8 @@ class ActionModule(object):
 
         ### add to inventory
         for group, hosts in groups.items():
-            inv_group = inventory.get_group(group)
-            if not inv_group:
-                inv_group = ansible.inventory.Group(name=group)
-                inventory.add_group(inv_group)
-            for host in hosts:
-                del self.runner.inventory._vars_per_host[host]
-                inv_host = inventory.get_host(host)
-                if not inv_host:
-                    inv_host = ansible.inventory.Host(name=host)
-                if inv_group not in inv_host.get_groups():
-                    result['changed'] = True
-                    inv_group.add_host(inv_host)
+            for hostname in hosts:
+                inventory.add_host_to_group(hostname, group)
+                result['changed'] = True
 
         return ReturnData(conn=conn, comm_ok=True, result=result)

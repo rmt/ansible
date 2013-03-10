@@ -660,3 +660,13 @@ def is_list_of_strings(items):
            return False
    return True
 
+def lookup_module_attribute(module_colon_attribute):
+    ''' Given foo:bar, import the foo module and return the bar attribute in it. '''
+    modulename, attrname = module_colon_attribute.split(":", 1)
+    module = __import__(modulename, fromlist=[attrname]) # raises ImportError
+    try:
+        return getattr(module, attrname)
+    except AttributeError as e:
+        raise NameError("Attribute %s in %s module was not found"
+            % (attrname, modulename))
+
